@@ -2,8 +2,11 @@
 
 var App = function() {
 
+    this.worker = new Worker('worker.js');
     this.width = 500;
     this.height = 500;
+    this.viewport = new Float32Array(4);
+    this.viewport_bytes = new Uint8Array(this.viewport.buffer);
 
     var count = 5000, rsize = 0.01, msize = 0.3, i, j, cx, cy, w, h,
         randomX = d3.random.normal(this.width / 2, 70),
@@ -20,6 +23,11 @@ var App = function() {
         this.data[j++] = cx + w;
         this.data[j++] = cy + h;
     }
+
+    this.worker.postMessage({
+        'funcName': 'd3cpp_set_data',
+        'data': this.data
+    });
 
     this.xform = d3.scale.linear()
         .domain([0, this.width])
@@ -53,10 +61,14 @@ var App = function() {
     raf();
 };
 
-App.prototype.viewport = function() {
+App.prototype.compute_viewport = function() {
     var xdomain = this.xform.domain();
     var ydomain = this.yform.domain();
-    return [xdomain[0], ydomain[0], xdomain[1], ydomain[1]];
+    this.viewport[0] = xdomain[0];
+    this.viewport[1] = ydomain[0];
+    this.viewport[2] = xdomain[1];
+    this.viewport[3] = ydomain[1];
+    return this.viewport_bytes;
 };
 
 App.prototype.zoom = function() {
@@ -83,6 +95,11 @@ App.prototype.draw = function() {
         canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
     }
     canvas.stroke();
+
+    this.worker.postMessage({
+        'funcName': 'd3cpp_set_viewport',
+        'data': this.compute_viewport()
+    });
 };
 
 var app = new App();
