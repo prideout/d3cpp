@@ -40,24 +40,34 @@ var App = function() {
             .on("zoom", this.zoom.bind(this)))
         .node().getContext("2d");
 
-    this.draw();
+    this.dirty = true;
+
+    var raf = function() {
+        if (this.dirty) {
+            this.draw();
+            this.dirty = false;
+        }
+        requestAnimationFrame(raf);
+    }.bind(this);
+
+    raf();
 };
 
 App.prototype.viewport = function() {
-    var xdomain = app.xform.domain();
-    var ydomain = app.yform.domain();
+    var xdomain = this.xform.domain();
+    var ydomain = this.yform.domain();
     return [xdomain[0], ydomain[0], xdomain[1], ydomain[1]];
 };
 
 App.prototype.zoom = function() {
-  this.context.clearRect(0, 0, this.width, this.height);
-  this.draw();
+  this.dirty = true;
 };
 
 App.prototype.draw = function() {
     var i = -1, j = 0, data = this.data, n = data.length / 4,
         cx, cy, x0, y0, x1, y1, w, h,
         canvas = this.context, x = this.xform, y = this.yform;
+    canvas.clearRect(0, 0, this.width, this.height);
     canvas.globalAlpha = 0.2;
     canvas.strokeStyle = "rgb(0, 0, 0)";
     canvas.beginPath();
