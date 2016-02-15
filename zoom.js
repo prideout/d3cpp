@@ -3,16 +3,25 @@
 var App = function() {
 
     this.worker = new Worker('worker.js');
+    this.collisions = null;
+
+    this.worker.onmessage = function(msg) {
+        this.collisions = new Uint32Array(msg.data.collisions.buffer);
+        this.dirty = true;
+    }.bind(this);
+
     this.width = 500;
     this.height = 500;
     this.viewport = new Float32Array(4);
     this.viewport_bytes = new Uint8Array(this.viewport.buffer);
 
-    var count = 5000, rsize = 0.01, msize = 0.3, i, j, cx, cy, w, h,
+    var count = 20, rsize = 0.02, msize = 0.5, i, j, cx, cy, w, h,
         randomX = d3.random.normal(this.width / 2, 70),
         randomY = d3.random.normal(this.height / 2, 70);
 
     this.data = new Float32Array(count * 4);
+    this.data_bytes = new Uint8Array(this.data.buffer);
+
     for (i = 0, j = 0; i < count; i++) {
         cx = randomX();
         cy = randomY();
@@ -26,7 +35,7 @@ var App = function() {
 
     this.worker.postMessage({
         'funcName': 'd3cpp_set_data',
-        'data': this.data
+        'data': this.data_bytes
     });
 
     this.xform = d3.scale.linear()
@@ -95,6 +104,33 @@ App.prototype.draw = function() {
         canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
     }
     canvas.stroke();
+
+    if (this.collisions) {
+        canvas.beginPath();
+        for (var i = 0; i < this.collisions.length; i += 2) {
+            j = (this.collisions[i]) * 4;
+            x0 = data[j++];
+            y0 = data[j++];
+            x1 = data[j++];
+            y1 = data[j];
+            cx = x(0.5 * (x0 + x1));
+            cy = y(0.5 * (y0 + y1));
+            w = x1 - x0;
+            h = y1 - y0;
+            canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
+            j = (this.collisions[i + 1]) * 4;
+            x0 = data[j++];
+            y0 = data[j++];
+            x1 = data[j++];
+            y1 = data[j];
+            cx = x(0.5 * (x0 + x1));
+            cy = y(0.5 * (y0 + y1));
+            w = x1 - x0;
+            h = y1 - y0;
+            canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
+        }
+        canvas.fill();
+    }
 
     this.worker.postMessage({
         'funcName': 'd3cpp_set_viewport',
