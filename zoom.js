@@ -5,7 +5,17 @@ var App = function() {
     this.worker = new Worker('worker.js');
     this.collisions = null;
 
+    // This flag enables us to avoid queing up work when collision takes
+    // longer than a single frame.
+    this.pending_collision = false;
+
+    var previous = performance.now();
     this.worker.onmessage = function(msg) {
+        this.pending_collision = false;
+        var current = performance.now();
+        var time = Math.floor(current - previous);
+        document.getElementById('perf').innerHTML = time + ' ms';
+        previous = current;
         this.collisions = new Uint32Array(msg.data.collisions.buffer);
         this.dirty_draw = true;
     }.bind(this);
@@ -59,24 +69,37 @@ var App = function() {
 
     this.dirty_draw = true;
     this.dirty_viewport = true;
+    this.tick = this.tick.bind(this);
+    this.tick();
+};
 
-    var raf = function() {
-        if (this.dirty_viewport) {
+App.prototype.tick = function() {
+
+    if (this.dirty_viewport) {
+
+        // If the worker is still busy, don't queue up requests, and don't
+        // clear the dirty flag.
+        if (!this.pending_collision) {
+            this.pending_collision = true;
             this.worker.postMessage({
                 'funcName': 'd3cpp_set_viewport',
                 'data': this.compute_viewport()
             });
             this.dirty_viewport = false;
-            this.dirty_draw = true;
         }
-        if (this.dirty_draw) {
-            this.draw();
-            this.dirty_draw = false;
-        }
-        requestAnimationFrame(raf);
-    }.bind(this);
 
-    raf();
+        // Zooming and panning should always be as responsive as possible,
+        // even if the worker is bogged down.  So, if the viewport moved,
+        // then we definitely need to redraw the canvas.
+        this.dirty_draw = true;
+    }
+
+    if (this.dirty_draw) {
+        this.draw();
+        this.dirty_draw = false;
+    }
+
+    requestAnimationFrame(this.tick);
 };
 
 App.prototype.compute_viewport = function() {
