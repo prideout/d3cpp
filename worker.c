@@ -13,14 +13,21 @@ struct {
     int nboxes;
     par_sprune_context* context;
     float viewport[4];
+    float winsize[2];
 } app = {0};
+
+void d3cpp_set_winsize(float const* data, int nbytes)
+{
+    assert(nbytes == 8);
+    app.viewport[2] = app.winsize[0] = data[0];
+    app.viewport[3] = app.winsize[1] = data[1];
+}
 
 void d3cpp_set_data(uint8_t const* data, int nbytes)
 {
     if (app.original_boxes == 0) {
         app.original_boxes = malloc(nbytes);
         app.nboxes = nbytes / 16;
-        app.viewport[2] = app.viewport[3] = 500;
     }
     assert(app.nboxes == nbytes / 16);
     memcpy(app.original_boxes, data, nbytes);
@@ -32,8 +39,8 @@ static void d3cpp_execute()
         app.transformed_boxes = malloc(app.nboxes * 16);
     }
 
-    float sx = 500.0 / (app.viewport[2] - app.viewport[0]);
-    float sy = 500.0 / (app.viewport[3] - app.viewport[1]);
+    float sx = app.winsize[0] / (app.viewport[2] - app.viewport[0]);
+    float sy = app.winsize[1] / (app.viewport[3] - app.viewport[1]);
 
     float const* src = (float const*) app.original_boxes;
     float* dst = (float*) app.transformed_boxes;

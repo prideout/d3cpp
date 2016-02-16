@@ -5,7 +5,7 @@ var App = function() {
     this.worker = new Worker('worker.js');
     this.collisions = null;
 
-    // This flag enables us to avoid queing up work when collision takes
+    // This flag enables us to avoid queuing up work when collision takes
     // longer than a single frame.
     this.pending_collision = false;
 
@@ -20,46 +20,46 @@ var App = function() {
         this.dirty_draw = true;
     }.bind(this);
 
-    this.width = 500;
-    this.height = 500;
+    var canvas = document.getElementsByTagName('canvas')[0];
+    this.winsize = new Float32Array(2);
+    this.winsize_bytes = new Uint8Array(this.winsize.buffer);
+    this.winsize[0] = canvas.clientWidth;
+    canvas.style.height = this.winsize[0] + 'px';
+    this.winsize[1] = canvas.clientHeight;
+    this.send_message('d3cpp_set_winsize', this.winsize_bytes);
+
     this.viewport = new Float32Array(4);
     this.viewport_bytes = new Uint8Array(this.viewport.buffer);
 
     var count = 500, rsize = 0.02, msize = 0.3, i, j, cx, cy, w, h,
-        randomX = d3.random.normal(this.width / 2, 70),
-        randomY = d3.random.normal(this.height / 2, 70);
-
+        randomX = d3.random.normal(this.winsize[0] / 2, this.winsize[0] / 5),
+        randomY = d3.random.normal(this.winsize[1] / 2, this.winsize[1] / 5);
     this.data = new Float32Array(count * 4);
     this.data_bytes = new Uint8Array(this.data.buffer);
-
     for (i = 0, j = 0; i < count; i++) {
         cx = randomX();
         cy = randomY();
-        w = this.width * rsize * (msize + Math.random());
-        h = this.height * rsize * (msize + Math.random());
+        w = this.winsize[0] * rsize * (msize + Math.random());
+        h = this.winsize[1] * rsize * (msize + Math.random());
         this.data[j++] = cx - w;
         this.data[j++] = cy - h;
         this.data[j++] = cx + w;
         this.data[j++] = cy + h;
     }
-
-    this.worker.postMessage({
-        'funcName': 'd3cpp_set_data',
-        'data': this.data_bytes
-    });
+    this.send_message('d3cpp_set_data', this.data_bytes);
 
     this.xform = d3.scale.linear()
-        .domain([0, this.width])
-        .range([0, this.width]);
+        .domain([0, this.winsize[0]])
+        .range([0, this.winsize[0]]);
 
     this.yform = d3.scale.linear()
-        .domain([0, this.height])
-        .range([this.height, 0]);
+        .domain([0, this.winsize[1]])
+        .range([this.winsize[1], 0]);
 
-    this.context = d3.select("body")
-        .append("canvas")
-        .attr("width", this.width)
-        .attr("height", this.height)
+    var pixelScale = window.devicePixelRatio || 1;
+    this.context = d3.select("canvas")
+        .attr("width", this.winsize[0] * pixelScale)
+        .attr("height", this.winsize[1] * pixelScale)
         .call(d3.behavior.zoom()
             .x(this.xform)
             .y(this.yform)
@@ -67,10 +67,18 @@ var App = function() {
             .on("zoom", this.zoom.bind(this)))
         .node().getContext("2d");
 
+    this.context.scale(pixelScale, pixelScale);
     this.dirty_draw = true;
     this.dirty_viewport = true;
     this.tick = this.tick.bind(this);
     this.tick();
+};
+
+App.prototype.send_message = function(msg, data) {
+    this.worker.postMessage({
+        'funcName': msg,
+        'data': data
+    });
 };
 
 App.prototype.tick = function() {
@@ -81,10 +89,7 @@ App.prototype.tick = function() {
         // clear the dirty flag.
         if (!this.pending_collision) {
             this.pending_collision = true;
-            this.worker.postMessage({
-                'funcName': 'd3cpp_set_viewport',
-                'data': this.compute_viewport()
-            });
+            this.send_message('d3cpp_set_viewport', this.compute_viewport());
             this.dirty_viewport = false;
         }
 
@@ -120,9 +125,9 @@ App.prototype.draw = function() {
     var i = -1, j = 0, data = this.data, n = data.length / 4,
         cx, cy, x0, y0, x1, y1, w, h,
         canvas = this.context, x = this.xform, y = this.yform;
-    canvas.clearRect(0, 0, this.width, this.height);
-    canvas.globalAlpha = 0.2;
-    canvas.strokeStyle = "rgb(0, 0, 0)";
+    canvas.clearRect(0, 0, this.winsize[0], this.winsize[1]);
+    canvas.strokeStyle = "rgba(0, 0, 0, 0.7)";
+    canvas.fillStyle = "rgba(0, 0, 0, 0.2)";
     canvas.beginPath();
     while (++i < n) {
         x0 = data[j++];
