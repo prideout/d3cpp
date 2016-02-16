@@ -61,16 +61,17 @@ var App = function() {
     this.dirty_viewport = true;
 
     var raf = function() {
-        if (this.dirty_draw) {
-            this.draw();
-            this.dirty_draw = false;
-        }
         if (this.dirty_viewport) {
             this.worker.postMessage({
                 'funcName': 'd3cpp_set_viewport',
                 'data': this.compute_viewport()
             });
             this.dirty_viewport = false;
+            this.dirty_draw = true;
+        }
+        if (this.dirty_draw) {
+            this.draw();
+            this.dirty_draw = false;
         }
         requestAnimationFrame(raf);
     }.bind(this);
