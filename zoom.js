@@ -7,7 +7,7 @@ var App = function() {
 
     this.worker.onmessage = function(msg) {
         this.collisions = new Uint32Array(msg.data.collisions.buffer);
-        this.dirty = true;
+        this.dirty_draw = true;
     }.bind(this);
 
     this.width = 500;
@@ -15,7 +15,7 @@ var App = function() {
     this.viewport = new Float32Array(4);
     this.viewport_bytes = new Uint8Array(this.viewport.buffer);
 
-    var count = 20, rsize = 0.02, msize = 0.5, i, j, cx, cy, w, h,
+    var count = 500, rsize = 0.02, msize = 0.3, i, j, cx, cy, w, h,
         randomX = d3.random.normal(this.width / 2, 70),
         randomY = d3.random.normal(this.height / 2, 70);
 
@@ -57,12 +57,20 @@ var App = function() {
             .on("zoom", this.zoom.bind(this)))
         .node().getContext("2d");
 
-    this.dirty = true;
+    this.dirty_draw = true;
+    this.dirty_viewport = true;
 
     var raf = function() {
-        if (this.dirty) {
+        if (this.dirty_draw) {
             this.draw();
-            this.dirty = false;
+            this.dirty_draw = false;
+        }
+        if (this.dirty_viewport) {
+            this.worker.postMessage({
+                'funcName': 'd3cpp_set_viewport',
+                'data': this.compute_viewport()
+            });
+            this.dirty_viewport = false;
         }
         requestAnimationFrame(raf);
     }.bind(this);
@@ -81,7 +89,7 @@ App.prototype.compute_viewport = function() {
 };
 
 App.prototype.zoom = function() {
-  this.dirty = true;
+  this.dirty_viewport = true;
 };
 
 App.prototype.draw = function() {
@@ -131,11 +139,6 @@ App.prototype.draw = function() {
         }
         canvas.fill();
     }
-
-    this.worker.postMessage({
-        'funcName': 'd3cpp_set_viewport',
-        'data': this.compute_viewport()
-    });
 };
 
 var app = new App();

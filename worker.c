@@ -8,33 +8,51 @@
 #include <assert.h>
 
 struct {
-    float* boxes;
+    float* original_boxes;
+    float* transformed_boxes;
     int nboxes;
     par_sprune_context* context;
+    float viewport[4];
 } app = {0};
 
 void d3cpp_set_data(uint8_t const* data, int nbytes)
 {
-    if (app.boxes == 0) {
-        app.boxes = malloc(nbytes);
+    if (app.original_boxes == 0) {
+        app.original_boxes = malloc(nbytes);
         app.nboxes = nbytes / 16;
+        app.viewport[2] = app.viewport[3] = 500;
     }
     assert(app.nboxes == nbytes / 16);
-    memcpy(app.boxes, data, nbytes);
+    memcpy(app.original_boxes, data, nbytes);
+}
 
-    #ifdef VERBOSE
-    float const* boxes = app.boxes;
-    for (int i = 0; i < app.nboxes; i++) {
-        float x0 = *boxes++;
-        float y0 = *boxes++;
-        float x1 = *boxes++;
-        float y1 = *boxes++;
-        printf("%f %f %f %f\n",
-            x0, y0, x1, y1);
+static void d3cpp_execute()
+{
+    if (app.transformed_boxes == 0) {
+        app.transformed_boxes = malloc(app.nboxes * 16);
     }
-    #endif
 
-    app.context = par_sprune_overlap(app.boxes, app.nboxes, app.context);
+    float sx = 500.0 / (app.viewport[2] - app.viewport[0]);
+    float sy = 500.0 / (app.viewport[3] - app.viewport[1]);
+
+    float const* src = (float const*) app.original_boxes;
+    float* dst = (float*) app.transformed_boxes;
+    for (int i = 0; i < app.nboxes * 4;) {
+        float x0 = *src++;
+        float y0 = *src++;
+        float x1 = *src++;
+        float y1 = *src++;
+        float cx = sx * 0.5 * (x0 + x1);
+        float cy = sy * 0.5 * (y0 + y1);
+        float w = 0.5 * (x1 - x0);
+        float h = 0.5 * (y1 - y0);
+        dst[i++] = cx - w;
+        dst[i++] = cy - h;
+        dst[i++] = cx + w;
+        dst[i++] = cy + h;
+    }
+
+    app.context = par_sprune_overlap(dst, app.nboxes, app.context);
     uint8_t const* collisions = (uint8_t const*) app.context->collision_pairs;
     int ncollisions = app.context->ncollision_pairs;
 
@@ -48,7 +66,12 @@ void d3cpp_set_data(uint8_t const* data, int nbytes)
 void d3cpp_set_viewport(float const* data, int nbytes)
 {
     assert(nbytes == 16);
+    app.viewport[0] = data[0];
+    app.viewport[1] = data[1];
+    app.viewport[2] = data[2];
+    app.viewport[3] = data[3];
     #ifdef VERBOSE
     printf("%.2f %.2f %.2f %.2f\n", data[0], data[1], data[2], data[2]);
     #endif
+    d3cpp_execute();
 }
