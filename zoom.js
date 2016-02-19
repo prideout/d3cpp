@@ -1,21 +1,37 @@
 'using strict';
 
+var BENCHMARK = false;
+
+var monkeypatch_random = function(seed) {
+
+    var m_w = seed || 123456789;
+    var m_z = 987654321;
+    var mask = 0xffffffff;
+
+    Math.random = function() {
+        m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & mask;
+        m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & mask;
+        var result = ((m_z << 16) + m_w) & mask;
+        result /= 4294967296;
+        return result + 0.5;
+    }
+};
+
 var App = function() {
 
     this.worker = new Worker('worker.js');
     this.collisions = null;
+    this.start_time = performance.now();
 
     // This flag enables us to avoid queuing up work when collision takes
     // longer than a single frame.
     this.pending_collision = false;
 
-    var previous = performance.now();
     this.worker.onmessage = function(msg) {
         this.pending_collision = false;
         var current = performance.now();
-        var time = Math.floor(current - previous);
+        var time = Math.floor(current - this.start_time);
         document.getElementById('perf').innerHTML = time + ' ms';
-        previous = current;
         this.collisions = new Uint32Array(msg.data.collisions.buffer);
         this.dirty_draw = true;
     }.bind(this);
@@ -30,6 +46,8 @@ var App = function() {
 
     this.viewport = new Float32Array(4);
     this.viewport_bytes = new Uint8Array(this.viewport.buffer);
+
+    monkeypatch_random();
 
     var count = 500, rsize = 0.02, msize = 0.3, i, j, cx, cy, w, h,
         randomX = d3.random.normal(this.winsize[0] / 2, this.winsize[0] / 5),
@@ -56,15 +74,17 @@ var App = function() {
         .domain([0, this.winsize[1]])
         .range([this.winsize[1], 0]);
 
+    this.mouse_handler = d3.behavior.zoom()
+        .x(this.xform)
+        .y(this.yform)
+        .scaleExtent([1, 40])
+        .on("zoom", this.zoom.bind(this));
+
     var pixelScale = window.devicePixelRatio || 1;
     this.context = d3.select("canvas")
         .attr("width", this.winsize[0] * pixelScale)
         .attr("height", this.winsize[1] * pixelScale)
-        .call(d3.behavior.zoom()
-            .x(this.xform)
-            .y(this.yform)
-            .scaleExtent([1, 40])
-            .on("zoom", this.zoom.bind(this)))
+        .call(this.mouse_handler)
         .node().getContext("2d");
 
     this.context.scale(pixelScale, pixelScale);
@@ -90,6 +110,7 @@ App.prototype.tick = function() {
         if (!this.pending_collision) {
             this.pending_collision = true;
             this.send_message('d3cpp_set_viewport', this.compute_viewport());
+            this.start_time = performance.now();
             this.dirty_viewport = false;
         }
 
@@ -102,6 +123,17 @@ App.prototype.tick = function() {
     if (this.dirty_draw) {
         this.draw();
         this.dirty_draw = false;
+    }
+
+    if (BENCHMARK) {
+        var pc = this.perf_counter = (this.perf_counter || 0) + 1;
+        if ((pc % 10) == 0) {
+            var dm = [0, this.winsize[0] + 100 * Math.sin(pc / 10)];
+            this.mouse_handler
+                .x(this.xform.domain(dm))
+                .y(this.yform.domain(dm));
+            this.zoom();
+        }
     }
 
     requestAnimationFrame(this.tick);

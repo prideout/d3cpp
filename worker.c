@@ -59,7 +59,12 @@ static void d3cpp_execute()
         dst[i++] = cy + h;
     }
 
-    app.context = par_sprune_overlap(dst, app.nboxes, app.context);
+    if (!app.context) {
+        app.context = par_sprune_overlap(dst, app.nboxes, app.context);
+    } else {
+        par_sprune_update(app.context);
+    }
+
     uint8_t const* collisions = (uint8_t const*) app.context->collision_pairs;
     int ncollisions = app.context->ncollision_pairs;
 
