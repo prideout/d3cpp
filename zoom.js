@@ -41,9 +41,9 @@ var App = function() {
     var canvas = document.getElementsByTagName('canvas')[0];
     this.winsize = new Float32Array(2);
     this.winsize_bytes = new Uint8Array(this.winsize.buffer);
-    this.winsize[0] = canvas.clientWidth;
+    var width = this.winsize[0] = canvas.clientWidth;
     canvas.style.height = this.winsize[0] + 'px';
-    this.winsize[1] = canvas.clientHeight;
+    var height = this.winsize[1] = canvas.clientHeight;
     this.send_message('d3cpp_set_winsize', this.winsize_bytes);
 
     this.viewport = new Float32Array(4);
@@ -68,19 +68,32 @@ var App = function() {
     }
     this.send_message('d3cpp_set_data', this.data_bytes);
 
-    this.xform = d3.scale.linear()
-        .domain([0, this.winsize[0]])
-        .range([0, this.winsize[0]]);
+    var x = this.xform = d3.scale.linear()
+        .domain([0, width])
+        .range([0, width]);
 
-    this.yform = d3.scale.linear()
-        .domain([0, this.winsize[1]])
-        .range([this.winsize[1], 0]);
+    var y = this.yform = d3.scale.linear()
+        .domain([0, height])
+        .range([height, 0]);
 
-    this.mouse_handler = d3.behavior.zoom()
+    var onzoom = this.zoom.bind(this);
+
+    var zoomer = this.mouse_handler = d3.behavior.zoom()
         .x(this.xform)
         .y(this.yform)
         .scaleExtent([1, 40])
-        .on("zoom", this.zoom.bind(this));
+        .on("zoom", onzoom);
+
+    document.getElementById("home").onclick = function() {
+        d3.transition().duration(750).tween("zoom", function() {
+            var ix = d3.interpolate(x.domain(), [0, width]),
+                iy = d3.interpolate(y.domain(), [0, height]);
+            return function(t) {
+              zoomer.x(x.domain(ix(t))).y(y.domain(iy(t)));
+              onzoom();
+            };
+        });
+    };
 
     var pixelScale = window.devicePixelRatio || 1;
     this.context = d3.select("canvas")
@@ -160,10 +173,9 @@ App.prototype.draw = function() {
         cx, cy, x0, y0, x1, y1, w, h,
         canvas = this.context, x = this.xform, y = this.yform;
     canvas.clearRect(0, 0, this.winsize[0], this.winsize[1]);
-    canvas.strokeStyle = "rgba(0, 0, 0, 0.1)";
-    canvas.fillStyle = "rgba(0, 0, 0, 0.1)";
+    canvas.strokeStyle = "rgba(0, 0, 0, 0.25)";
+    canvas.fillStyle = "rgba(0, 128, 255, 0.1)";
     while (++i < n) {
-        canvas.beginPath();
         x0 = data[j++];
         y0 = data[j++];
         x1 = data[j++];
@@ -172,13 +184,10 @@ App.prototype.draw = function() {
         cy = y(0.5 * (y0 + y1));
         w = x1 - x0;
         h = y1 - y0;
-        canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
-        canvas.stroke();
+        canvas.strokeRect(cx - w * 0.5, cy - h * 0.5, w, h);
     }
-
     if (this.collisions) {
         for (var i = 0; i < this.collisions.length; i += 2) {
-            canvas.beginPath();
             j = (this.collisions[i]) * 4;
             x0 = data[j++];
             y0 = data[j++];
@@ -188,7 +197,7 @@ App.prototype.draw = function() {
             cy = y(0.5 * (y0 + y1));
             w = x1 - x0;
             h = y1 - y0;
-            canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
+            canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
             j = (this.collisions[i + 1]) * 4;
             x0 = data[j++];
             y0 = data[j++];
@@ -198,8 +207,7 @@ App.prototype.draw = function() {
             cy = y(0.5 * (y0 + y1));
             w = x1 - x0;
             h = y1 - y0;
-            canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
-            canvas.fill();
+            canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
         }
     }
 };
