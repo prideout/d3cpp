@@ -19,8 +19,19 @@ html {
   visibility: visible;
   font-family: 'Open Sans', sans-serif;
 }
-b {
+button {
+    background: #DED5C4;
+    border: none;
+    border-radius: 5px;
+    line-height: 2;
+    margin-top: 5px;
+    margin-right: 5px;
+}
+button:hover { background: #7ae }
+button:focus { outline:0 }
+a {
     color: #369;
+    text-decoration: none;
 }
 body {
     padding: 0;
@@ -37,7 +48,7 @@ canvas {
     background-image: radial-gradient(250px at 50% 50%,
         rgba(255, 255, 255, 1) 0%,
         rgba(255, 255, 255, 0) 100%);
-    border-radius: 10px;
+    border-radius: 5px;
     width: 100%;
     height: 500px;
     max-width: 500px;
@@ -52,15 +63,19 @@ canvas {
 
 <body>
 <article>
-<b>par_sprune.h</b>
+<a href="https://github.com/prideout/par/blob/master/par_sprune.h">par_sprune.h</a>
 <p>
 Try zooming and panning within the canvas as though it were a map.  Overlapping quads are shaded.
 </p>
 <canvas>
 </canvas>
+<button id="home">home position</button>
+<button id="cull">culling</button>
 <pre id="perf"></pre>
 <p>
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+This is the web demo for <a href="https://github.com/prideout/par/blob/master/par_sprune.h">par_sprune.h</a>.
+It performs sweep-and-prune in an emscripten web worker.
+D3 is used for camera control.  Canvas2D is used for rendering.
 </p>
 </article>
 

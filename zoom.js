@@ -160,10 +160,10 @@ App.prototype.draw = function() {
         cx, cy, x0, y0, x1, y1, w, h,
         canvas = this.context, x = this.xform, y = this.yform;
     canvas.clearRect(0, 0, this.winsize[0], this.winsize[1]);
-    canvas.strokeStyle = "rgba(0, 0, 0, 0.7)";
-    canvas.fillStyle = "rgba(0, 0, 0, 0.2)";
-    canvas.beginPath();
+    canvas.strokeStyle = "rgba(0, 0, 0, 0.1)";
+    canvas.fillStyle = "rgba(0, 0, 0, 0.1)";
     while (++i < n) {
+        canvas.beginPath();
         x0 = data[j++];
         y0 = data[j++];
         x1 = data[j++];
@@ -173,12 +173,12 @@ App.prototype.draw = function() {
         w = x1 - x0;
         h = y1 - y0;
         canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
+        canvas.stroke();
     }
-    canvas.stroke();
 
     if (this.collisions) {
-        canvas.beginPath();
         for (var i = 0; i < this.collisions.length; i += 2) {
+            canvas.beginPath();
             j = (this.collisions[i]) * 4;
             x0 = data[j++];
             y0 = data[j++];
@@ -199,8 +199,8 @@ App.prototype.draw = function() {
             w = x1 - x0;
             h = y1 - y0;
             canvas.rect(cx - w * 0.5, cy - h * 0.5, w, h);
+            canvas.fill();
         }
-        canvas.fill();
     }
 };
 
