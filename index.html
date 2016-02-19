@@ -11,8 +11,16 @@
 <style>
 html {
     color: #404040;
-    font: 400 1em/1.4 'Open Sans', sans-serif;
+    font-weight: 400;
     text-rendering: optimizeLegibility;
+    visibility: hidden;
+}
+.wf-active, .wf-inactive {
+  visibility: visible;
+  font-family: 'Open Sans', sans-serif;
+}
+b {
+    color: #369;
 }
 body {
     padding: 0;
@@ -44,7 +52,7 @@ canvas {
 
 <body>
 <article>
-<h3>par_sprune.h</h3>
+<b>par_sprune.h</b>
 <p>
 Try zooming and panning within the canvas as though it were a map.  Overlapping quads are shaded.
 </p>

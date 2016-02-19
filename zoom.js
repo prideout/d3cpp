@@ -31,7 +31,9 @@ var App = function() {
         this.pending_collision = false;
         var current = performance.now();
         var time = Math.floor(current - this.start_time);
-        document.getElementById('perf').innerHTML = time + ' ms';
+        if (BENCHMARK) {
+            document.getElementById('perf').innerHTML = time + ' ms';
+        }
         this.collisions = new Uint32Array(msg.data.collisions.buffer);
         this.dirty_draw = true;
     }.bind(this);
