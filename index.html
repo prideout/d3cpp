@@ -8,6 +8,8 @@
 <title>Sweep and Prune</title>
 <meta name="description" content="Sweep and Prune demo">
 <meta name="author" content="Philip Rideout">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.1.0/styles/default.min.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/octicons/3.5.0/octicons.css">
 <style>
 html {
     color: #404040;
@@ -59,6 +61,11 @@ canvas {
     fill: none;
     pointer-events: all;
 }
+.hljs {
+    background: #EAE7DF;
+    font-size: 12px;
+    font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+}
 </style>
 </head>
 
@@ -78,12 +85,46 @@ This is the web demo for <a href="https://github.com/prideout/par/blob/master/pa
 It performs sweep-and-prune with 500 bounding boxes using an emscripten web worker.
 D3 is used for camera control.  Canvas2D is used for rendering.
 </p>
+
+The API is really simple.  There's only one important function:
+
+<pre><code class="c">// Takes an array of 4-tuples (minx miny maxx maxy) and performs SaP. Optionally
+// takes an existing context to avoid memory churn during animation.  Pass NULL
+// for the third argument when calling for the first time.
+par_sprune_context* par_sprune_overlap(float const* aabbs,
+    int naabbs, par_sprune_context* previous);
+</code></pre>
+
+This returns a structure that looks like this:
+
+<pre><code class="c">typedef struct {
+    int const* const collision_pairs; // list of two-tuples
+    int const ncollision_pairs;       // number of two-tuples
+} par_sprune_context;
+</code></pre>
+
+When you're done reading the data, use the provided free function:
+
+<pre><code class="c">void par_sprune_free_context(par_sprune_context* context);
+</code></pre>
+
+That's it!  The API also proffers a function for culling away overlapping boxes, which is potentially useful when drawing labels on a map.  See the header file for details.
+
+<br>
+<br>
+&nbsp;
+<a href="https://github.com/prideout/par"><span class="octicon octicon-mark-github"></span> prideout/par</a>
+<br>
+<br>
+
 </article>
 
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.1.0/highlight.min.js"></script>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="zoom.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.5.18/webfont.js"></script>
 <script>
+hljs.initHighlightingOnLoad();
 WebFont.load({ google: { families: ['Open Sans:400'] } });
 </script>
 </body>
