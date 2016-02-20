@@ -49,8 +49,11 @@ var App = function() {
     this.viewport = new Float32Array(4);
     this.viewport_bytes = new Uint8Array(this.viewport.buffer);
 
-    monkeypatch_random();
+    this.d3selection = d3.select(document.createElement("custom"));
+    this.d3trigger([1,2,13,20,23]);
+    this.d3trigger([1,2,12,16,20]);
 
+    monkeypatch_random();
     var count = 500, rsize = 0.02, msize = 0.3, i, j, cx, cy, w, h,
         randomX = d3.random.normal(this.winsize[0] / 2, this.winsize[0] / 5),
         randomY = d3.random.normal(this.winsize[1] / 2, this.winsize[1] / 5);
@@ -104,7 +107,7 @@ var App = function() {
         } else {
             cull_button.classList.remove('checked');
         }
-        this.dirty_viewport = true;
+        this.dirty_draw = true;
     }.bind(this);
 
     var pixelScale = window.devicePixelRatio || 1;
@@ -238,6 +241,54 @@ App.prototype.draw = function() {
             }
         }
     }
+
+    canvas.fillStyle = "#fff";
+    var elements = this.d3selection.selectAll("custom.rect");
+    elements.each(function(d) {
+        var node = d3.select(this);
+        canvas.beginPath();
+        canvas.fillStyle = node.attr("fillStyle");
+        canvas.rect(node.attr("x"), node.attr("y"),
+            node.attr("size"), node.attr("size"));
+        canvas.fill();
+        canvas.closePath();
+    });
+};
+
+App.prototype.d3trigger = function(data) {
+
+    var scale = d3.scale.linear()
+        .range([0, 500])
+        .domain(d3.extent(data));
+
+    var dataBinding = this.d3selection.selectAll("custom.rect")
+        .data(data, function(d) { return d; });
+
+    dataBinding
+        .attr("size", 8)
+        .transition()
+        .duration(1000)
+        .ease(function(t) {
+            this.dirty_draw = true;
+            return t;
+        }.bind(this))
+        .attr("size", 50)
+        .attr("fillStyle", "green");
+
+    dataBinding.enter()
+        .append("custom")
+        .classed("rect", true)
+        .attr("x", scale)
+        .attr("y", 100)
+        .attr("size", 8)
+        .attr("fillStyle", "red");
+
+    dataBinding.exit()
+        .attr("size", 8)
+        .transition()
+        .duration(1000)
+        .attr("size", 5)
+        .attr("fillStyle", "lightgrey");
 };
 
 var app = new App();
