@@ -3,11 +3,9 @@
 var BENCHMARK = false;
 
 var monkeypatch_random = function(seed) {
-
     var m_w = seed || 123456789;
     var m_z = 987654321;
     var mask = 0xffffffff;
-
     Math.random = function() {
         m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & mask;
         m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & mask;
@@ -21,6 +19,7 @@ var App = function() {
 
     this.worker = new Worker('worker.js');
     this.collisions = null;
+    this.culled = null;
     this.start_time = performance.now();
 
     // This flag enables us to avoid queuing up work when collision takes
@@ -35,6 +34,7 @@ var App = function() {
             document.getElementById('perf').innerHTML = time + ' ms';
         }
         this.collisions = new Uint32Array(msg.data.collisions.buffer);
+        this.culled = new Uint32Array(msg.data.culled.buffer);
         this.dirty_draw = true;
     }.bind(this);
 
@@ -94,6 +94,18 @@ var App = function() {
             };
         });
     };
+
+    this.culling = false;
+    var cull_button = document.getElementById("cull");
+    cull_button.onclick = function() {
+        this.culling = !this.culling;
+        if (this.culling) {
+            cull_button.classList.add('checked');
+        } else {
+            cull_button.classList.remove('checked');
+        }
+        this.dirty_viewport = true;
+    }.bind(this);
 
     var pixelScale = window.devicePixelRatio || 1;
     this.context = d3.select("canvas")
@@ -175,39 +187,48 @@ App.prototype.draw = function() {
     canvas.clearRect(0, 0, this.winsize[0], this.winsize[1]);
     canvas.strokeStyle = "rgba(0, 0, 0, 0.25)";
     canvas.fillStyle = "rgba(0, 128, 255, 0.1)";
+    var culled = this.culling ? this.culled : [];
     while (++i < n) {
-        x0 = data[j++];
-        y0 = data[j++];
-        x1 = data[j++];
-        y1 = data[j++];
-        cx = x(0.5 * (x0 + x1));
-        cy = y(0.5 * (y0 + y1));
-        w = x1 - x0;
-        h = y1 - y0;
-        canvas.strokeRect(cx - w * 0.5, cy - h * 0.5, w, h);
+        if (culled.indexOf(i) == -1) {
+            x0 = data[j++];
+            y0 = data[j++];
+            x1 = data[j++];
+            y1 = data[j++];
+            cx = x(0.5 * (x0 + x1));
+            cy = y(0.5 * (y0 + y1));
+            w = x1 - x0;
+            h = y1 - y0;
+            canvas.strokeRect(cx - w * 0.5, cy - h * 0.5, w, h);
+        } else {
+            j += 4;
+        }
     }
     if (this.collisions) {
         for (var i = 0; i < this.collisions.length; i += 2) {
-            j = (this.collisions[i]) * 4;
-            x0 = data[j++];
-            y0 = data[j++];
-            x1 = data[j++];
-            y1 = data[j];
-            cx = x(0.5 * (x0 + x1));
-            cy = y(0.5 * (y0 + y1));
-            w = x1 - x0;
-            h = y1 - y0;
-            canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
-            j = (this.collisions[i + 1]) * 4;
-            x0 = data[j++];
-            y0 = data[j++];
-            x1 = data[j++];
-            y1 = data[j];
-            cx = x(0.5 * (x0 + x1));
-            cy = y(0.5 * (y0 + y1));
-            w = x1 - x0;
-            h = y1 - y0;
-            canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
+            j = this.collisions[i] * 4;
+            if (culled.indexOf(j / 4) == -1) {
+                x0 = data[j++];
+                y0 = data[j++];
+                x1 = data[j++];
+                y1 = data[j];
+                cx = x(0.5 * (x0 + x1));
+                cy = y(0.5 * (y0 + y1));
+                w = x1 - x0;
+                h = y1 - y0;
+                canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
+            }
+            j = this.collisions[i + 1] * 4;
+            if (culled.indexOf(j / 4) == -1) {
+                x0 = data[j++];
+                y0 = data[j++];
+                x1 = data[j++];
+                y1 = data[j];
+                cx = x(0.5 * (x0 + x1));
+                cy = y(0.5 * (y0 + y1));
+                w = x1 - x0;
+                h = y1 - y0;
+                canvas.fillRect(cx - w * 0.5, cy - h * 0.5, w, h);
+            }
         }
     }
 };

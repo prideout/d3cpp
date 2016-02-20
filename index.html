@@ -29,6 +29,7 @@ button {
 }
 button:hover { background: #7ae; color: #fff; }
 button:focus { outline:0 }
+button.checked { border: solid 1px black; }
 a {
     color: #369;
     text-decoration: none;
@@ -74,7 +75,7 @@ Try zooming and panning within the canvas as though it were a map.  Overlapping 
 <pre id="perf"></pre>
 <p>
 This is the web demo for <a href="https://github.com/prideout/par/blob/master/par_sprune.h">par_sprune.h</a>.
-It performs sweep-and-prune in an emscripten web worker.
+It performs sweep-and-prune with 500 bounding boxes using an emscripten web worker.
 D3 is used for camera control.  Canvas2D is used for rendering.
 </p>
 </article>

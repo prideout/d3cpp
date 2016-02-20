@@ -64,15 +64,19 @@ static void d3cpp_execute()
     } else {
         par_sprune_update(app.context);
     }
+    par_sprune_cull(app.context);
 
     uint8_t const* collisions = (uint8_t const*) app.context->collision_pairs;
     int ncollisions = app.context->ncollision_pairs;
+    uint8_t const* culled = (uint8_t const*) app.context->culled;
+    int nculled = app.context->nculled;
 
     EM_ASM_INT({
         postMessage({
-            collisions: new Uint8Array(HEAPU8.subarray($0, $1))
+            collisions: new Uint8Array(HEAPU8.subarray($0, $1)),
+            culled: new Uint8Array(HEAPU8.subarray($2, $3)),
         });
-    }, collisions, collisions + ncollisions * 8);
+    }, collisions, collisions + ncollisions * 8, culled, culled + nculled * 4);
 }
 
 void d3cpp_set_viewport(float const* data, int nbytes)
