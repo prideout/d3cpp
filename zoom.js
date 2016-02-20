@@ -187,7 +187,12 @@ App.prototype.draw = function() {
     canvas.clearRect(0, 0, this.winsize[0], this.winsize[1]);
     canvas.strokeStyle = "rgba(0, 0, 0, 0.25)";
     canvas.fillStyle = "rgba(0, 128, 255, 0.1)";
-    var culled = this.culling ? this.culled : [];
+
+    // Safari doesn't support indexOf with typed arrays, so we have to convert
+    // it into a native JS array.
+    var culled = this.culling ? Array.prototype.slice.call(this.culled) : [];
+
+    // Draw black outlines for every non-culled box.
     while (++i < n) {
         if (culled.indexOf(i) == -1) {
             x0 = data[j++];
@@ -203,6 +208,8 @@ App.prototype.draw = function() {
             j += 4;
         }
     }
+
+    // Draw bluish fill for every box that has overlap.
     if (this.collisions) {
         for (var i = 0; i < this.collisions.length; i += 2) {
             j = this.collisions[i] * 4;
